@@ -75,7 +75,6 @@ def update(winner, loser):
   squads[winner], squads[loser] = true_skill(winner_stats, loser_stats)
   
 for game in games:
-  print(game)
   update(*game)
 
 rank = lambda x: squads[x][0] - 3*squads[x][1]
