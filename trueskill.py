@@ -67,19 +67,21 @@ def true_skill(winner, loser):
   
   return winner, loser
   
-squads = {}
-
 def update(winner, loser):
   winner_stats = squads.get(winner, (25, 25/3))
   loser_stats = squads.get(loser, (25, 25/3))
   squads[winner], squads[loser] = true_skill(winner_stats, loser_stats)
-  
-for game in games:
-  update(*game)
 
 rank = lambda x: squads[x][0] - 3*squads[x][1]
 
-for squad in sorted(squads, key=rank):
-  µ = squads[squad][0]
-  σ = squads[squad][1]
-  print("%6s R: %5.2f µ: %5.2f σ: %5.2f" % (squad, rank(squad), µ, σ))
+if __name__ == "__main__":
+  
+  squads = {}
+  
+  for game in games:
+    update(*game)
+  
+  for squad in sorted(squads, key=rank):
+    µ = squads[squad][0]
+    σ = squads[squad][1]
+    print("%6s R: %5.2f µ: %5.2f σ: %5.2f" % (squad, rank(squad), µ, σ))
