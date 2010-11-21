@@ -5,8 +5,8 @@ import sys
 
 from scipy.stats.distributions import norm as scipy_norm
 
-beta = 25/6
-gamma = 25/300
+beta = 25./6
+gamma = 25./300
 epsilon = 0.08
 
 norm = scipy_norm()
@@ -40,7 +40,7 @@ def true_skill(winner, loser):
     loser = mul_new, sigmal_new
     
     return winner, loser
-  
+
 def update(squads, winner, loser):
     winner_stats = squads.get(winner, (25, 25/3))
     loser_stats = squads.get(loser, (25, 25/3))
