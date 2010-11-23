@@ -7,7 +7,7 @@ import csv
 from scipy.stats.distributions import norm as scipy_norm
 import numpy as np
 
-beta = 24.
+beta = 21.
 gamma = 1./12
 epsilon = 0.01
 
@@ -76,17 +76,30 @@ def main(argv):
         update(player_ranks, winner, loser)
     
     mus = []
-    histogram = np.zeros((50,), 'i')
+    histogram = np.zeros((50,))
+    print("Player ranks")
+    print("============")
     for player in sorted(player_ranks, key=lambda player: rank(player_ranks, player)):
         mu = player_ranks[player][0]
         sigma = player_ranks[player][1]
-        print("%20s R: %5.2f mu: %5.2f sigma: %5.2f" % (player, rank(player_ranks, player), mu, sigma))
+        level = max(0, int(round(rank(player_ranks, player))))
+        print("%20s   Lv %2d   Skill=%5.2f +- %5.2f" % (player, level, mu, sigma*3))
         mus.append(mu)
         bin = int(max(0, np.floor(rank(player_ranks, player))))
         histogram[bin] += 1
-    
-    print((np.mean(mus), np.std(mus)))
-    print(histogram)
+    print()
+    print("Statistics")
+    print("==========")
+    print("mean =", np.mean(mus))
+    print("stdev =", np.std(mus))
+    print()
+
+    total = np.sum(histogram)
+    partials = np.cumsum(histogram)
+    percentiles = partials / total
+    for i in xrange(50):
+        if histogram[i] > 0:
+            print("Level %2d: %4d players, percentile %4.1f" % (i, histogram[i], percentiles[i]*100))
 
     win_levels = np.zeros((100,))
     loss_levels = np.zeros((100,))
@@ -100,9 +113,11 @@ def main(argv):
             loss_levels[int(diff)] += 1
         else:
             win_levels[int(diff)] += 1
-    probs = win_levels / (win_levels + loss_levels)
-    print(probs)
-        
+    probs = 1.0 - (win_levels+1) / (win_levels + loss_levels + 1)
+    
+    print()
+    for diff in (1, 5, 10, 15, 20, 25, 30, 40):
+        print("Probablity of %d-point upset: %4.1f%%" % (diff, probs[diff]*100))
     return player_ranks, probs
 
 if __name__ == "__main__":
