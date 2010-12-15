@@ -5,6 +5,7 @@ import sys
 import csv
 
 from scipy.stats.distributions import norm as scipy_norm
+from collections import defaultdict
 import numpy as np
 
 beta = 21.
@@ -62,31 +63,62 @@ def update(player_ranks, winner, loser):
     loser_stats = player_ranks.get(loser, (MEAN, MEAN/STDEVS))
     player_ranks[winner], player_ranks[loser] = true_skill(winner_stats, loser_stats)
 
+def update(player_ranks, scores):
+    stats = {}
+    changes = defaultdict(list)
+    for id, score in scores:
+        stats[id] = player_ranks.get(id, (MEAN, MEAN/STDEVS))
+    for i in xrange(len(scores)):
+        p1, score1 = scores[i]
+        for j in xrange(i+1, len(scores)):
+            p2, score2 = scores[j]
+            if score1 > score2:
+                muw_adjust, sigmaw2_adjust, mul_adjust, sigmal2_adjust\
+                  = adjust_for_win(stats[p1], stats[p2])
+                changes[p1].append((muw_adjust, sigmaw2_adjust))
+                changes[p2].append((mul_adjust, sigmal2_adjust))
+            elif score1 < score2:
+                muw_adjust, sigmaw2_adjust, mul_adjust, sigmal2_adjust\
+                  = adjust_for_win(stats[p2], stats[p1])
+                changes[p2].append((muw_adjust, sigmaw2_adjust))
+                changes[p1].append((mul_adjust, sigmal2_adjust))
+            elif score1 == score2:
+                muw_adjust, sigmaw2_adjust, mul_adjust, sigmal2_adjust\
+                  = adjust_for_win(stats[p1], stats[p2])
+                changes[p1].append((muw_adjust, sigmaw2_adjust))
+                changes[p2].append((mul_adjust, sigmal2_adjust))
+    for id, score in scores:
+        apply_changes(player_ranks, id, changes[id])
+
+def apply_changes(player_ranks, id, changes):
+    mu, sigma = player_ranks.get(id, (MEAN, MEAN/STDEVS))
+    sigma2 = sigma**2
+    for mu_change, sigma_factor in changes:
+        mu += mu_change
+        sigma2 *= sigma_factor
+    player_ranks[id] = mu, sigma2**0.5
+
 def rank(player_ranks, player):
     return player_ranks[player][0] - STDEVS*player_ranks[player][1]
 
 def main(argv):
-    games = []
+    stat_games = []
     reader = csv.reader(open(argv[1]))
+    player_ranks = {}
     for row in reader:
         scorelist = row[6:]
         assert len(scorelist) % 4 == 0
         players = []
         for playernum in xrange(len(scorelist) // 4):
             name, win, pts, turns = scorelist[playernum*4 : (playernum+1)*4]
-            players.append((name, int(pts), int(turns)))
+            players.append((name, (int(pts), -int(turns))))
         
-        # fixme: this awards ties to later players, which isn't actually
-        # correct
-        players.sort(key = lambda x: (x[1], -x[2]))
+        players.sort(key = lambda x: x[1])
         for loser in xrange(len(players) - 1):
             for winner in xrange(loser + 1, len(players)):
-                games.append( (players[winner][0], players[loser][0]) )
+                stat_games.append( (players[winner][0], players[loser][0]) )
 
-    player_ranks = {}
-    
-    for winner, loser in games:
-        update(player_ranks, winner, loser)
+        update(player_ranks, players)
     
     mus = []
     histogram = np.zeros((50,))
@@ -116,7 +148,7 @@ def main(argv):
 
     win_levels = np.zeros((100,))
     loss_levels = np.zeros((100,))
-    for winner, loser in games:
+    for winner, loser in stat_games:
         upset = False
         diff = rank(player_ranks, winner) - rank(player_ranks, loser)
         if diff < 0:
