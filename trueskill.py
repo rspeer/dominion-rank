@@ -9,9 +9,10 @@ import numpy as np
 
 beta = 21.
 gamma = 1./12
-epsilon = 0.01
-STDEVS = 2
+STDEVS = 3
 MEAN = 25.
+epsilon = 0.5
+
 norm = scipy_norm()
 
 def pdf(x):
@@ -26,23 +27,35 @@ def Vwin(t, e):
 def Wwin(t, e):
     return Vwin(t, e) * (Vwin(t, e) + t - e)
 
-def true_skill(winner, loser):
+def Vdraw(t, e):
+    return (pdf(-e - t) - pdf(e - t)) / (cdf(e - t) - cdf(-e - t))
+
+def Wdraw(t, e):
+    adjustment_num = (e - t)*pdf(e - t) + (e + t)*pdf(e + t)
+    adjustment_denom = cdf(e - t) - cdf(-e - t)
+    return Vdraw(t, e) ** 2 + adjustment_num / adjustment_denom
+
+def adjust_scores(winner, loser, Vfunc, Wfunc, loss_polarity=-1):
     muw, sigmaw = winner
     mul, sigmal = loser
     
     c = (2*beta**2 + sigmaw**2 + sigmal**2)**.5
     t = (muw - mul) / c
     e = epsilon / c
-    
-    sigmaw_new = (sigmaw**2 * (1 - (sigmaw**2) / (c**2)*Wwin(t, e)) + gamma**2)**.5
-    sigmal_new = (sigmal**2 * (1 - (sigmal**2) / (c**2)*Wwin(t, e)) + gamma**2)**.5
-    muw_new = (muw + sigmaw**2/c * Vwin(t,e))
-    mul_new = (mul - sigmal**2/c * Vwin(t,e))
-    
-    winner = muw_new, sigmaw_new
-    loser = mul_new, sigmal_new
-    
-    return winner, loser
+
+    sigmaw2_adjust = 1 - (sigmaw**2) / (c**2)*Wfunc(t, e)
+    sigmal2_adjust = 1 - (sigmal**2) / (c**2)*Wfunc(t, e)
+
+    muw_adjust = sigmaw**2/c * Vfunc(t, e)
+    mul_adjust = loss_polarity * sigmal**2/c * Vfunc(t, e)
+
+    return muw_adjust, sigmaw2_adjust, mul_adjust, sigmal2_adjust
+
+def adjust_for_win(winner, loser):
+    return adjust_scores(winner, loser, Vwin, Wwin, -1)
+
+def adjust_for_draw(p1, p2):
+    return adjust_scores(p1, p2, Vdraw, Wdraw, 1)
 
 def update(player_ranks, winner, loser):
     winner_stats = player_ranks.get(winner, (MEAN, MEAN/STDEVS))
@@ -52,7 +65,6 @@ def update(player_ranks, winner, loser):
 def rank(player_ranks, player):
     return player_ranks[player][0] - STDEVS*player_ranks[player][1]
 
-import random
 def main(argv):
     games = []
     reader = csv.reader(open(argv[1]))
