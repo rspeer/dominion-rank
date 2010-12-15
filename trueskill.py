@@ -8,7 +8,7 @@ from scipy.stats.distributions import norm as scipy_norm
 from collections import defaultdict
 import numpy as np
 
-beta = 21.
+beta = 25.
 gamma = 1./12
 STDEVS = 3
 MEAN = 25.
