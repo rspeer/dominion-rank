@@ -10,7 +10,8 @@ import numpy as np
 beta = 21.
 gamma = 1./12
 epsilon = 0.01
-
+STDEVS = 2
+MEAN = 25.
 norm = scipy_norm()
 
 def pdf(x):
@@ -44,12 +45,12 @@ def true_skill(winner, loser):
     return winner, loser
 
 def update(player_ranks, winner, loser):
-    winner_stats = player_ranks.get(winner, (25, 25./3))
-    loser_stats = player_ranks.get(loser, (25, 25./3))
+    winner_stats = player_ranks.get(winner, (MEAN, MEAN/STDEVS))
+    loser_stats = player_ranks.get(loser, (MEAN, MEAN/STDEVS))
     player_ranks[winner], player_ranks[loser] = true_skill(winner_stats, loser_stats)
 
 def rank(player_ranks, player):
-    return player_ranks[player][0] - 3*player_ranks[player][1]
+    return player_ranks[player][0] - STDEVS*player_ranks[player][1]
 
 import random
 def main(argv):
@@ -83,7 +84,7 @@ def main(argv):
         mu = player_ranks[player][0]
         sigma = player_ranks[player][1]
         level = max(0, int(round(rank(player_ranks, player))))
-        print("%20s   Lv %2d   Skill=%5.2f +- %5.2f" % (player, level, mu, sigma*3))
+        print("%20s   Lv %2d   Skill=%5.2f +- %5.2f" % (player, level, mu, sigma*STDEVS))
         mus.append(mu)
         bin = int(max(0, np.floor(rank(player_ranks, player))))
         histogram[bin] += 1
