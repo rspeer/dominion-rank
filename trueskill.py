@@ -1,5 +1,12 @@
 #!/usr/bin/env python2.6
 from __future__ import print_function
+"""
+Make a high score list out of Isotropic .csv results.
+
+Example of how to run it:
+
+    python trueskill.py all-csv-games.csv
+"""
 import math
 import sys
 import csv
@@ -57,11 +64,6 @@ def adjust_for_win(winner, loser):
 
 def adjust_for_draw(p1, p2):
     return adjust_scores(p1, p2, Vdraw, Wdraw, 1)
-
-def update(player_ranks, winner, loser):
-    winner_stats = player_ranks.get(winner, (MEAN, MEAN/STDEVS))
-    loser_stats = player_ranks.get(loser, (MEAN, MEAN/STDEVS))
-    player_ranks[winner], player_ranks[loser] = true_skill(winner_stats, loser_stats)
 
 def update(player_ranks, scores):
     stats = {}
@@ -124,11 +126,13 @@ def main(argv):
     histogram = np.zeros((50,))
     print("Player ranks")
     print("============")
-    for player in sorted(player_ranks, key=lambda player: rank(player_ranks, player)):
+    ranklist = sorted(player_ranks, key=lambda player: -rank(player_ranks, player))
+    for i, player in enumerate(ranklist):
         mu = player_ranks[player][0]
         sigma = player_ranks[player][1]
         level = max(0, int(round(rank(player_ranks, player))))
-        print("%20s   Lv %2d   Skill=%5.2f +- %5.2f" % (player, level, mu, sigma*STDEVS))
+        if i < 1000:
+            print("%4d. %20s   Lv %2d   Skill=%5.2f +- %5.2f" % (i+1, player, level, mu, sigma*STDEVS))
         mus.append(mu)
         bin = int(max(0, np.floor(rank(player_ranks, player))))
         histogram[bin] += 1
